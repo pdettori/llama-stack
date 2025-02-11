@@ -165,9 +165,16 @@ class MetaReferenceAgentsImpl(Agents):
         self,
         request: AgentTurnCreateRequest,
     ) -> AsyncGenerator:
-        agent = await self.get_agent(request.agent_id)
-        async for event in agent.create_and_execute_turn(request):
-            yield event
+        import asyncio
+        try:
+            agent = await self.get_agent(request.agent_id)
+            async for event in agent.create_and_execute_turn(request):
+                yield event
+        except asyncio.CancelledError as e:
+            print(">>>>>>>>")
+            print(e)
+            # Handle cleanup or logging before exiting.
+            raise          
 
     async def get_agents_turn(self, agent_id: str, session_id: str, turn_id: str) -> Turn:
         turn = await self.persistence_store.get(f"session:{agent_id}:{session_id}:{turn_id}")

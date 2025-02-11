@@ -39,6 +39,27 @@ def available_providers() -> List[ProviderSpec]:
                 Api.tool_groups,
             ],
         ),
+        InlineProviderSpec(
+            api=Api.agents,
+            provider_type="inline::meta-reference-queued",
+            pip_packages=[
+                "matplotlib",
+                "pillow",
+                "pandas",
+                "scikit-learn",
+            ]
+            + kvstore_dependencies(),
+            module="llama_stack.providers.inline.agents.meta_reference_queued",
+            config_class="llama_stack.providers.inline.agents.meta_reference_queued.MetaReferenceAgentsQueuedImplConfig",
+            api_dependencies=[
+                Api.inference,
+                Api.safety,
+                Api.vector_io,
+                Api.vector_dbs,
+                Api.tool_runtime,
+                Api.tool_groups,
+            ],
+        ),
         remote_provider_spec(
             api=Api.agents,
             adapter=AdapterSpec(

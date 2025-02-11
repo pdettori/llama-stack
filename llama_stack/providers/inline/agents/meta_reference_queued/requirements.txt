@@ -1,0 +1,5 @@
+bullmq==2.9.4
+redis>=5.2.0,<6.0.0
+opentelemetry-instrumentation-redis>=0.49b2,<1.0.0
+opentelemetry.instrumentation.asyncpg==0.51b0
+asyncpg==0.30.0
