@@ -8,13 +8,13 @@ from typing import Dict
 
 from llama_stack.distribution.datatypes import Api, ProviderSpec
 
-from .config import MetaReferenceAgentsQueuedImplConfig
+from .config import MetaReferenceAgentsWorkerImplConfig
 
 
-async def get_provider_impl(config: MetaReferenceAgentsQueuedImplConfig, deps: Dict[Api, ProviderSpec]):
-    from .agents import MetaReferenceAgentsQueuedImpl
+async def get_provider_impl(config: MetaReferenceAgentsWorkerImplConfig, deps: Dict[Api, ProviderSpec]):
+    from .agents import MetaReferenceAgentsWorkerImpl
 
-    impl = MetaReferenceAgentsQueuedImpl(
+    impl = MetaReferenceAgentsWorkerImpl(
         config,
         deps[Api.inference],
         deps[Api.vector_io],

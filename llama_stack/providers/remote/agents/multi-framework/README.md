@@ -40,16 +40,16 @@ The PoC uses a **Web-Queue-Worker pattern**, which offers several advantages, in
 graph LR
     Client[Client] --> API[API Layer]
     API --> Router
-    Router --> AgentsAPI[MetaReferenceAgentsQueuedImpl]
+    Router --> AgentsAPI[MetaReferenceAgentsDispatcherImpl]
     AgentsAPI --> DB
     AgentsAPI --> Queue
-    Queue --> WorkerAgent
-    WorkerAgent --> PubSub[PubSub Topic]
+    Queue --> MetaReferenceAgentsWorkerImpl
+    MetaReferenceAgentsWorkerImpl --> PubSub[PubSub Topic]
     PubSub --> AgentsAPI
     
-    WorkerAgent --> InferenceAPI
-    WorkerAgent --> ToolRuntimeAPI
-    WorkerAgent --> DB
+    MetaReferenceAgentsWorkerImpl --> InferenceAPI
+    MetaReferenceAgentsWorkerImpl --> ToolRuntimeAPI
+    MetaReferenceAgentsWorkerImpl --> DB
     InferenceAPI --> ModelProvider[Model Provider]
     ToolRuntimeAPI --> ToolProvider[Tool Provider]
    
@@ -69,27 +69,27 @@ graph LR
 
 **API Layer**: 
 
-The API layer fronts the Llama Stack Server and is configured to utilize the `MetaReferenceAgentsQueuedImpl` provider instead of the default `MetaReferenceAgentsImpl`:
+The API layer fronts the Llama Stack Server and is configured to utilize the `MetaReferenceAgentsDispatcherImpl` provider instead of the default `MetaReferenceAgentsImpl`:
 
-* `MetaReferenceAgentsQueuedImpl` inherits from `MetaReferenceAgentsImpl`, and it overrides the `create_agent_turn` method.
+* `MetaReferenceAgentsDispatcherImpl` inherits from `MetaReferenceAgentsImpl`, and it overrides the `create_agent_turn` method.
 * Instead of initiating the agent `turn` directly, it queues the `turn`, ensuring that events for the `turn` are broadcasted via a Redis pub-sub topic allocated specifically for that `turn`.
 Worker Agent:
 
 **Worker Agent**
 
-* The Worker Agent sets up the `LlamaStackAsLibraryClient` to load the entire Llama stack as a library.
+* The Worker Agent (`MetaReferenceAgentsWorkerImpl`) sets up the `LlamaStackAsLibraryClient` to load the entire Llama stack as a library.
 * It retrieves jobs from the queue, executes the agent turn using the agent API, and then publishes the related events to the pub-sub topic associated with that turn.
 
 **Event Handling**
 
-`MetaReferenceAgentsQueuedImpl` listens to the pub-sub topic for each turn and relays the events back to the client through *Server-Sent Events (SSE)*, ensuring real-time updates and seamless integration between the components.
+`MetaReferenceAgentsDispatcherImpl` listens to the pub-sub topic for each turn and relays the events back to the client through *Server-Sent Events (SSE)*, ensuring real-time updates and seamless integration between the components.
 
 
 ## Running demo
 
 **DISCLAIMER**
 
-The PoC is not completed yet, it's just work in progress. There are still several challenges to sort out
+The PoC is not completed yet, it's just very early work in progress. There are still several challenges to sort out
 to finalize the design and an implementation plan. The current code (server, workers) runs as python processes 
 on the host, and infra services (Redis, Postgres) run as docker container. Next steps are to run infra services
 and Llama Stack Server and Agent Workers on Kubernetes.
@@ -126,7 +126,7 @@ git checkout run-queues
 4. After doing the "llama stack build" step, there will be a python 3.10 env within `/opt/homebrew/Caskroom/miniconda/base/envs/stack` which has been created by `uv`. Use that env to install the extra deps - e.g.,
 
     ```shell
-    /opt/homebrew/Caskroom/miniconda/base/envs/stack/bin/pip install -r llama_stack/providers/inline/agents/meta_reference_queued/requirements.txt 
+    /opt/homebrew/Caskroom/miniconda/base/envs/stack/bin/pip install -r llama_stack/providers/inline/agents/meta_reference_dispatcher/requirements.txt 
     ```
 
 ### Running the PoC
@@ -154,7 +154,7 @@ env 'stack' is activated and run the server as follows:
 
 ```shell
 conda activate stack
-llama stack run llama_stack/providers/inline/agents/meta_reference_queued/run.yaml 
+llama stack run llama_stack/providers/inline/agents/meta_reference_dispatcher/run.yaml 
 ```
 
 #### Starting llama-stack worker

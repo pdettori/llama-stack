@@ -125,28 +125,9 @@ class JobHandler:
 
             turnId = "db989fce-4dcf-4128-a960-8908028670f4"
             channel = DEBUG_RUN_ID
-            # turn_start = {"event":{"payload":{"event_type":"turn_start","turn_id":turnId}}}
-            # await redis_client.publish(f'{channel}', json.dumps(turn_start))
-            
-            # step_id = "57b80ccf-dceb-4150-933c-51c8e2e801bb"
-            # step_tool_start = {"event":{"payload":{"event_type":"step_start","step_type":"tool_execution","step_id":step_id,"metadata":{}}}}
-            # await redis_client.publish(f'{channel}', json.dumps(step_tool_start))
-
-            # step_tool_end = {"event":{"payload":{"event_type":"step_complete","step_type":"tool_execution","step_id":step_id}}}
-            # await redis_client.publish(f'{channel}', json.dumps(step_tool_end))
-
-            # step_id = "cf86b24c-bc2b-486c-9cd3-eb8c1a361d30"
-            # step_inference_start = {"event":{"payload":{"event_type":"step_start","step_type":"inference","step_id":step_id,"metadata":{}}}}
-            # await redis_client.publish(f'{channel}', json.dumps(step_inference_start))
+    
 
             for log in EventLogger().log(response):
-                #print(log.content)
-                step_progress = {"event":{"payload":{"event_type":"step_progress","step_type":"inference","step_id":"step_id","delta":{"type":"text","text": log.content}}}}
-                # step_progress = {"event":{"payload":{"event_type":"step_progress","step_type":"inference","step_id":step_id,"delta":{"type":"text","text":log.content}}}}
-                await redis_client.publish(f'{channel}', json.dumps(step_progress))
-
-            # step_complete = {"event":{"payload":{"event_type":"step_complete","step_type":"inference","step_id":"cf86b24c-bc2b-486c-9cd3-eb8c1a361d30","step_details":{"turn_id":"db989fce-4dcf-4128-a960-8908028670f4","step_id":"cf86b24c-bc2b-486c-9cd3-eb8c1a361d30"}}}}
-            # await redis_client.publish(f'{channel}', json.dumps(step_complete))
-
-            # turn_complete = {"event":{"payload":{"event_type":"turn_complete","turn":{"turn_id":"db989fce-4dcf-4128-a960-8908028670f4","session_id":"81a36768-c02a-402b-891a-62a70d90a8b0"}}}}
-            # await redis_client.publish(f'{channel}', json.dumps(turn_complete))
+                logger.info(log.content)
+                #step_progress = {"event":{"payload":{"event_type":"step_progress","step_type":"inference","step_id":"step_id","delta":{"type":"text","text": log.content}}}}
+                #await redis_client.publish(f'{channel}', json.dumps(step_progress))

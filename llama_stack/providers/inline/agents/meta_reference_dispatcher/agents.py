@@ -7,6 +7,7 @@ from llama_stack.apis.agents import (
     AgentTurnCreateRequest,
     AgentTurnResponseStreamChunk,
     Document,
+    AgentTurnResponseEventType
 )
 from typing import AsyncGenerator, List, Optional, Union
 from llama_stack.apis.inference import (
@@ -22,12 +23,15 @@ from llama_stack.apis.tools import ToolGroups, ToolRuntime
 from llama_stack.apis.vector_io import VectorIO
 from llama_stack.apis.inference import Inference
 
+EventType = AgentTurnResponseEventType
+
 log = logging.getLogger(__name__)
 
 LS_JOBS_QUEUE = "ls_jobs" # this might come from env
-DEBUG_RUN_ID = "run_123456"
+DEBUG_RUN_ID = "run_123456" # used for debug/test
 
-class MetaReferenceAgentsQueuedImpl(MetaReferenceAgentsImpl):
+# Dispatches jobs for agent turns using a Queue-Worker Pattern
+class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
     def __init__(
         self,
         config: MetaReferenceAgentsImplConfig,
@@ -55,6 +59,7 @@ class MetaReferenceAgentsQueuedImpl(MetaReferenceAgentsImpl):
         stream: Optional[bool] = False,
         tool_config: Optional[ToolConfig] = None,
     ) -> AsyncGenerator:
+        print(f"MetaReferenceAgentsDispatcherImpl.create_agent_turn: {agent_id} and session {session_id}")
         request = AgentTurnCreateRequest(
             agent_id=agent_id,
             session_id=session_id,
@@ -64,8 +69,6 @@ class MetaReferenceAgentsQueuedImpl(MetaReferenceAgentsImpl):
             documents=documents,
             tool_config=tool_config,
         )
-        log.info(f"Hello Agent {agent_id} and session {session_id}")
-
         # TODO:
         # 1. generate run_id
         # 2. store agent_id, session_id, messages, toolgroups, documents, stream, tool_config with key run_id
@@ -80,15 +83,14 @@ class MetaReferenceAgentsQueuedImpl(MetaReferenceAgentsImpl):
     async def add_job_to_queue(self, run_id):
         # Add a job to the queue and wait for it asynchronously
         job = await self.jobs_queue.add(run_id, {'run_id': run_id})
-        
-        log.info(f"Job for run_id {run_id} added with ID: {job.id}")
-
+        print(f"Job for run_id {run_id} added with ID: {job.id}")
 
 class RedisSubscriber:
     def __init__(self, channel_name):
         self.channel_name = channel_name
         self.redis = None
         self.pubsub = None
+        self.end_turn = False
 
     async def connect(self):
         self.redis = await redis.from_url("redis://localhost")
@@ -104,14 +106,20 @@ class RedisSubscriber:
             try:
                 message = await self.pubsub.get_message(ignore_subscribe_messages=True, timeout=1)
                 if message and message['type'] == 'message':
-                    event = message['data'].decode('utf-8')
-                    return AgentTurnResponseStreamChunk.model_validate_json(event)
+                    try:
+                        json_event = message['data'].decode('utf-8')
+                    except UnicodeDecodeError:
+                        log.error("Failed to decode message data")
+                        #return
+                    
+                    chunk = AgentTurnResponseStreamChunk.model_validate_json(json_event)
+                    return chunk    
             except asyncio.CancelledError as e:
-                log.info(">>>> Generator cancelled")
-                raise e  # Re-raise the CancelledError to ensure proper cleanup
+                raise e  
             except Exception as e:
                 log.exception("Unexpected error: %s", e)
                 raise e
+            
 
     async def disconnect(self):
         if self.pubsub:

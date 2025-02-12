@@ -171,7 +171,6 @@ class MetaReferenceAgentsImpl(Agents):
             async for event in agent.create_and_execute_turn(request):
                 yield event
         except asyncio.CancelledError as e:
-            print(">>>>>>>>")
             print(e)
             # Handle cleanup or logging before exiting.
             raise          

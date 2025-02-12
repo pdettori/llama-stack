@@ -41,7 +41,7 @@ def available_providers() -> List[ProviderSpec]:
         ),
         InlineProviderSpec(
             api=Api.agents,
-            provider_type="inline::meta-reference-queued",
+            provider_type="inline::meta-reference-dispatcher",
             pip_packages=[
                 "matplotlib",
                 "pillow",
@@ -49,8 +49,29 @@ def available_providers() -> List[ProviderSpec]:
                 "scikit-learn",
             ]
             + kvstore_dependencies(),
-            module="llama_stack.providers.inline.agents.meta_reference_queued",
-            config_class="llama_stack.providers.inline.agents.meta_reference_queued.MetaReferenceAgentsQueuedImplConfig",
+            module="llama_stack.providers.inline.agents.meta_reference_dispatcher",
+            config_class="llama_stack.providers.inline.agents.meta_reference_dispatcher.MetaReferenceAgentsDispatcherImplConfig",
+            api_dependencies=[
+                Api.inference,
+                Api.safety,
+                Api.vector_io,
+                Api.vector_dbs,
+                Api.tool_runtime,
+                Api.tool_groups,
+            ],
+        ),
+        InlineProviderSpec(
+            api=Api.agents,
+            provider_type="inline::meta-reference-worker",
+            pip_packages=[
+                "matplotlib",
+                "pillow",
+                "pandas",
+                "scikit-learn",
+            ]
+            + kvstore_dependencies(),
+            module="llama_stack.providers.inline.agents.meta_reference_worker",
+            config_class="llama_stack.providers.inline.agents.meta_reference_worker.MetaReferenceAgentsWorkerImplConfig",
             api_dependencies=[
                 Api.inference,
                 Api.safety,

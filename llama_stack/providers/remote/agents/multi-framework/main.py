@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import logging
+import os
+import sys
 from logger import setup_logging
 from telemetry import setup_telemetry
-
 import asyncio
 import signal
 from aiohttp import web
@@ -81,16 +82,24 @@ async def create_web_app(workers: list[Worker]):
         logger.info("HTTP server shut down successfully.")
     return stop_web_app
 
-async def create_library_client(template="ollama"):
-    client = LlamaStackAsLibraryClient("ollama")
+async def create_library_client(config_path_or_template_name):
+    print(f"using config: {config_path_or_template_name}")
+    client = LlamaStackAsLibraryClient(config_path_or_template_name=config_path_or_template_name)
     if not await client.async_client.initialize():
-        raise Exception("llama stack not built properly")
+        print("llama stack not built properly")
+        sys.exit(1)
     return client
+
+# For the time being, let's assume the run.yaml file is colocated with this code
+# TODO - find better approach, perhaps specify in config file
+def get_run_file_path():
+    current_directory = os.path.dirname(__file__)
+    return os.path.join(current_directory, "run.yaml")
 
 async def main():
     setup_logging()
     setup_telemetry()
-    ls_client = await create_library_client()
+    ls_client = await create_library_client(config_path_or_template_name=get_run_file_path())
 
     nest_asyncio.apply()
     jobHandler = JobHandler(ls_client)
