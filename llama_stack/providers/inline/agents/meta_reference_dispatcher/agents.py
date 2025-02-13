@@ -72,13 +72,27 @@ class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
         # TODO:
         # 1. generate run_id
         # 2. store agent_id, session_id, messages, toolgroups, documents, stream, tool_config with key run_id
+        import json
+
+        # TODO - temp hack to pass session_id along
+        def write_dict_to_file(file_path, dictionary):
+            """Writes a flat dictionary to a JSON file."""
+            try:
+                with open(file_path, 'w') as file:
+                    json.dump(dictionary, file)
+                print(f"Dictionary successfully written to {file_path}.")
+            except Exception as e:
+                print(f"An error occurred while writing to the file: {e}")
+
+        dict = {"session_id":session_id, "agent_id": agent_id}
+        write_dict_to_file("/tmp/turn_info.json", dict)      
 
         await self.add_job_to_queue(DEBUG_RUN_ID)
 
         # wait for events from redis pub-sub
         subscriber = RedisSubscriber(channel_name=DEBUG_RUN_ID)
         await subscriber.connect()
-        return subscriber
+        return subscriber.wait_for_events()
 
     async def add_job_to_queue(self, run_id):
         # Add a job to the queue and wait for it asynchronously
@@ -97,8 +111,8 @@ class RedisSubscriber:
         self.pubsub = self.redis.pubsub()
         await self.pubsub.subscribe(self.channel_name)
         log.info(f"Subscribed to {self.channel_name}")
-
-    async def __anext__(self):
+          
+    async def wait_for_events(self) -> AsyncGenerator:
         if not self.pubsub:
             raise RuntimeError("You must call connect() before iterating")
 
@@ -110,26 +124,19 @@ class RedisSubscriber:
                         json_event = message['data'].decode('utf-8')
                     except UnicodeDecodeError:
                         log.error("Failed to decode message data")
-                        #return
                     
                     chunk = AgentTurnResponseStreamChunk.model_validate_json(json_event)
-                    return chunk    
+
+                    yield chunk   
             except asyncio.CancelledError as e:
                 raise e  
             except Exception as e:
                 log.exception("Unexpected error: %s", e)
-                raise e
+                raise e        
             
-
     async def disconnect(self):
         if self.pubsub:
             await self.pubsub.unsubscribe(self.channel_name)
             await self.pubsub.close()
         if self.redis:
             await self.redis.close()
-
-    async def aclose(self):
-        await self.disconnect()        
-
-    def __aiter__(self):
-        return self    

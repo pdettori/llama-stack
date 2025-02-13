@@ -17,7 +17,7 @@ from dotenv import load_dotenv, find_dotenv
 _ = load_dotenv(find_dotenv()) # read local .env file
 
 HOST = "localhost"
-PORT = 8322
+PORT = 8321
 
 
 def run_main(disable_safety: bool = False):
@@ -63,7 +63,7 @@ def run_main(disable_safety: bool = False):
         tool_prompt_format="json",
         input_shields=available_shields if available_shields else [],
         output_shields=available_shields if available_shields else [],
-        enable_session_persistence=False,
+        enable_session_persistence=True,
     )
 
     agent = Agent(client, agent_config)

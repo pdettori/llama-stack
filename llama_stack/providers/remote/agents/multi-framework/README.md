@@ -123,10 +123,11 @@ git checkout run-queues
     llama stack build --template ollama
     ``` 
 
-4. After doing the "llama stack build" step, there will be a python 3.10 env within `/opt/homebrew/Caskroom/miniconda/base/envs/stack` which has been created by `uv`. Use that env to install the extra deps - e.g.,
+4. Install extra deps with:
 
     ```shell
-    /opt/homebrew/Caskroom/miniconda/base/envs/stack/bin/pip install -r llama_stack/providers/inline/agents/meta_reference_dispatcher/requirements.txt 
+    uv pip install -r llama_stack/providers/inline/agents/meta_reference_worker/requirements.txt 
+    pip install -r llama_stack/providers/inline/agents/meta_reference_worker/requirements.txt 
     ```
 
 ### Running the PoC
@@ -154,6 +155,8 @@ env 'stack' is activated and run the server as follows:
 
 ```shell
 conda activate stack
+export LLAMA_STACK_PORT=8321
+export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
 llama stack run llama_stack/providers/inline/agents/meta_reference_dispatcher/run.yaml 
 ```
 

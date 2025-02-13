@@ -36,9 +36,13 @@ providers:
     provider_type: inline::meta-reference-dispatcher
     config:
       persistence_store:
-        type: sqlite
-        namespace: null
-        db_path: ${env.SQLITE_STORE_DIR:~/.llama/distributions/ollama}/agents_store.db
+        type: postgres
+        host: localhost
+        port: 5432
+        db: postgres
+        user: postgres
+        password: mysecretpassword
+        table_name: llamastack_kvstore # Optional, defaults to llamastack_kvstore
   telemetry:
   - provider_id: meta-reference
     provider_type: inline::meta-reference

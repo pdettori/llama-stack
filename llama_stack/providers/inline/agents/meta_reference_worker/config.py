@@ -9,7 +9,7 @@ from typing import Any, Dict
 from pydantic import BaseModel
 
 from llama_stack.providers.utils.kvstore import KVStoreConfig
-from llama_stack.providers.utils.kvstore.config import SqliteKVStoreConfig
+from llama_stack.providers.utils.kvstore.config import PostgresKVStoreConfig
 
 
 class MetaReferenceAgentsWorkerImplConfig(BaseModel):
@@ -18,8 +18,15 @@ class MetaReferenceAgentsWorkerImplConfig(BaseModel):
     @classmethod
     def sample_run_config(cls, __distro_dir__: str) -> Dict[str, Any]:
         return {
-            "persistence_store": SqliteKVStoreConfig.sample_run_config(
-                __distro_dir__=__distro_dir__,
-                db_name="agents_store.db",
+            "persistence_store": PostgresKVStoreConfig.sample_run_config(
+                db_name="llamastack_kvstore",
+                type= "postgres",
+                namespace=None,
+                host="localhost",
+                port=5432,
+                db="postgres",
+                user="postgres",
+                password="mysecretpassword",
+                table_name="llamastack_kvstore",
             )
         }

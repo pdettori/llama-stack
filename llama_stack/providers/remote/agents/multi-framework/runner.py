@@ -29,6 +29,7 @@ from llama_stack_client.lib.agents.event_logger import EventLogger
 from llama_stack_client.types.agent_create_params import AgentConfig
 from llama_stack_client.types.agents.turn_create_params import Document
 import time
+import asyncio
 
 tracer = trace.get_tracer("job-trace")
 from dotenv import load_dotenv, find_dotenv
@@ -85,25 +86,21 @@ class JobHandler:
         selected_model = available_models[0]
         print(f"Using model: {selected_model}")
 
-        # this should be retrieved from the DB
-        agent_config = AgentConfig(
-            model=selected_model,
-            instructions="You are a helpful assistant",
-            sampling_params={
-                "strategy": {"type": "top_p", "temperature": 1.0, "top_p": 0.9},
-            },
-            toolgroups=["builtin::rag"],
-            tool_choice="auto",
-            tool_prompt_format="json",
-            input_shields=available_shields if available_shields else [],
-            output_shields=available_shields if available_shields else [],
-            enable_session_persistence=False,
-        )
 
-        agent = Agent(client, agent_config)
-        session_id = agent.create_session("test-session")
-        print(f"Created session_id={session_id} for Agent({agent.agent_id})")
+        # TODO - temp hack to pass session_id along
+        def read_dict_from_file(file_path):
+            """Reads a flat dictionary from a JSON file."""
+            try:
+                with open(file_path, 'r') as file:
+                    dictionary = json.load(file)
+                print(f"Dictionary successfully read from {file_path}.")
+                return dictionary
+            except Exception as e:
+                print(f"An error occurred while reading from the file: {e}")
+                return None
 
+        cfg = read_dict_from_file("/tmp/turn_info.json")
+         
         user_prompts = [
             (
                 "What is KubeFlex? Give a short summary.",
@@ -112,7 +109,7 @@ class JobHandler:
         ]
 
         for prompt in user_prompts:
-            response = agent.create_turn(
+            response =  client.agents.turn.create(
                 messages=[
                     {
                         "role": "user",
@@ -120,14 +117,13 @@ class JobHandler:
                     }
                 ],
                 documents=prompt[1],
-                session_id=session_id,
+                session_id=cfg['session_id'],
+                agent_id=cfg['agent_id'],
+                stream="true",
             )
 
-            turnId = "db989fce-4dcf-4128-a960-8908028670f4"
-            channel = DEBUG_RUN_ID
     
-
+            # need to iterate and give time for events to be emitted by the MetaReferenceAgentsWorkerImpl 
             for log in EventLogger().log(response):
-                logger.info(log.content)
-                #step_progress = {"event":{"payload":{"event_type":"step_progress","step_type":"inference","step_id":"step_id","delta":{"type":"text","text": log.content}}}}
-                #await redis_client.publish(f'{channel}', json.dumps(step_progress))
+                await asyncio.sleep(0.01)
+               
