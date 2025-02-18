@@ -16,6 +16,9 @@ from llama_stack.apis.agents import (
     AgentTurnResponseStreamChunk,
     Document,
     AgentTurnResponseEventType,
+    AgentTurnResponseEvent,
+    AgentTurnResponseTurnCompletePayload,
+    Turn
 )
 from typing import AsyncGenerator, List, Optional, Union
 from llama_stack.apis.inference import (
@@ -138,14 +141,10 @@ class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
                 list_json = json.loads(list_raw)
                 turn_jobs_list = TurnJobsList.model_validate_json(list_json)
             else:
-                turn_jobs_list = (
-                    TurnJobsList()
-                )  
+                turn_jobs_list = TurnJobsList()
         except ValidationError as e:
             log.error(f"Failed to validate JSON due to: {e}")
-            turn_jobs_list = (
-                TurnJobsList()
-            )
+            turn_jobs_list = TurnJobsList()
 
         item = TurnJobItem.create(turn_job_id=turn_job_id)
         turn_jobs_list.append_item(item)
@@ -183,8 +182,20 @@ class RedisSubscriber:
                         log.error("Failed to decode message data")
 
                     chunk = AgentTurnResponseStreamChunk.model_validate_json(json_event)
-
-                    yield chunk
+                   
+                    # closing the SSE connection after the last event requires return without data
+                    # this will cause the server to send a content length of 0 and no data after that
+                    # normally there will be a content lenght line followed by a content line
+                    # e.g., 
+                    # ac <-content length in hex
+                    # data: {"event":{"payload":{"event_type":"step_progress","step_type":"inference",
+                    # "step_id":"b5d7edca-44a3-4dc7-9426-1b82e05c2b6c",
+                    # "delta":{"type":"text","text":" more"}}}} <- data
+                    if chunk is not None and chunk.event.payload.event_type == EventType.turn_complete.value:
+                        yield chunk
+                        return
+                    else:
+                        yield chunk
             except asyncio.CancelledError as e:
                 raise e
             except Exception as e:

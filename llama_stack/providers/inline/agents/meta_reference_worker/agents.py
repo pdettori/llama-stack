@@ -15,6 +15,7 @@ from llama_stack.apis.agents import (
     AgentTurnCreateRequest,
     AgentTurnResponseStreamChunk,
     Document,
+    AgentTurnResponseEventType
 )
 from typing import AsyncGenerator, List, Optional, Union
 from llama_stack.apis.inference import (
@@ -37,8 +38,7 @@ from llama_stack.providers.inline.agents.meta_reference_dispatcher import (
 
 log = logging.getLogger(__name__)
 
-LS_JOBS_QUEUE = "ls_jobs"  # this might come from env
-DEBUG_RUN_ID = "run_123456"  # used for debug/test
+EventType = AgentTurnResponseEventType
 
 
 # Dispatches jobs for agent turns using a Queue-Worker Pattern
@@ -109,7 +109,7 @@ class MetaReferenceAgentsWorkerImpl(MetaReferenceAgentsImpl):
             agent = await super().get_agent(request.agent_id)
             async for event in agent.create_and_execute_turn(request):
                 await self.publisher.publish(publisher_channel, event)
-                yield event
+                yield event    
         except asyncio.CancelledError as e:
             log.info(e)
             raise
@@ -153,9 +153,11 @@ class RedisPublisher:
     async def publish(self, channel, event: AgentTurnResponseStreamChunk):
         if not self.redis:
             raise Exception("Not connected to Redis. Call connect() first.")
+            
         await self.redis.publish(
             channel, AgentTurnResponseStreamChunk.model_dump_json(event)
         )
+
 
     async def disconnect(self):
         if self.pubsub:

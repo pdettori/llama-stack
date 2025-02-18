@@ -65,9 +65,7 @@ class MetaReferenceAgentsImpl(Agents):
         
 
     async def initialize(self) -> None:
-        print("initialize called in the MetaReferenceAgentsImpl()")
         self.persistence_store = await kvstore_impl(self.config.persistence_store)
-        print(self.persistence_store)
 
         # check if "bwrap" is available
         if not shutil.which("bwrap"):
