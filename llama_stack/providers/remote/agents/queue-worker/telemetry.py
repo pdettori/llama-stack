@@ -1,16 +1,8 @@
-# Copyright 2024 IBM Corp.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# This source code is licensed under the terms described in the LICENSE file in
+# the root directory of this source tree.
 
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
@@ -22,27 +14,22 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
-from config import config
 
-resource = Resource.create(attributes={
-    SERVICE_NAME: "bee-api"
-})
+OTEL_SDK_DISABLED = True
+
+resource = Resource.create(attributes={SERVICE_NAME: "llama-stack"})
 
 traceProvider = TracerProvider(resource=resource)
-logger_provider = LoggerProvider(
-    resource=resource
-)
+logger_provider = LoggerProvider(resource=resource)
 logging_handler = LoggingHandler(logger_provider=logger_provider)
 
 
 def setup_telemetry():
-    if config.otel_sdk_disabled:
+    if OTEL_SDK_DISABLED:
         return
 
-    traceProvider.add_span_processor(BatchSpanProcessor(
-        OTLPSpanExporter()))
+    traceProvider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     trace.set_tracer_provider(traceProvider)
 
     set_logger_provider(logger_provider)
-    logger_provider.add_log_record_processor(
-        BatchLogRecordProcessor(OTLPLogExporter()))
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))

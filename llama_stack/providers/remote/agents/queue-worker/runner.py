@@ -1,129 +1,66 @@
-# Copyright 2024 IBM Corp.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# This source code is licensed under the terms described in the LICENSE file in
+# the root directory of this source tree.
 
 import logging
 
 from bullmq import Job
 from opentelemetry import trace
 
-from workers import create_worker
-from database import create_postgres_client
-from workers import redis_client
+# from database import create_postgres_client
 import json
-from config import config
 import sys
 from llama_stack_client import LlamaStackClient
 from llama_stack_client.lib.agents.agent import Agent
 from llama_stack_client.lib.agents.event_logger import EventLogger
 from llama_stack_client.types.agent_create_params import AgentConfig
 from llama_stack_client.types.agents.turn_create_params import Document
+from llama_stack.apis.agents import AgentTurnCreateRequest
 import time
 import asyncio
 
 tracer = trace.get_tracer("job-trace")
 from dotenv import load_dotenv, find_dotenv
 
-_ = load_dotenv(find_dotenv()) # read local .env file
+_ = load_dotenv(find_dotenv())  # read local .env file
 
 logger = logging.getLogger()
-DEBUG_RUN_ID = "run_123456"
+
 
 class JobHandler:
-    def __init__(self, ls_client):
+    def __init__(self, ls_client, persistence_store, redis_store):
         self.ls_client = ls_client
-        
-    async def handleRun(self, job: Job, *args, **kwargs):
+        self.persistence_store = persistence_store
+        self.redis_store = redis_store
+
+    async def handleTurn(self, job: Job, *args, **kwargs):
         with tracer.start_as_current_span("job") as span:
-            data = job.data
-            print(data)
-            run_id = data.get('run_id')
-            if run_id is None:
-                raise RuntimeError("run_id not found")
-            
-            # need to retrieve the run info from the DB to start the create turn
-            
-            await self.create_turn()
-            
+            print(f'processing job {job.id}')
+            turn_job_id = job.data.get("turn_job_id")
+            if turn_job_id is None:
+                raise RuntimeError("turn_job_id not found")
 
-    async def create_turn(self, disable_safety: bool = False):
+            # retrieve the turn info from the DB to start the create turn
+            turn_data = await self.persistence_store.get(turn_job_id)
+            request = AgentTurnCreateRequest.model_validate_json(turn_data)
+
+            await self.create_turn(request)
+
+    async def create_turn(
+        self, request: AgentTurnCreateRequest, disable_safety: bool = False
+    ):
         client = self.ls_client
-        urls = [
-            "README.md",
-        ]
+   
+        response = client.agents.turn.create(
+            messages = request.messages,
+            documents = request.documents,
+            session_id = request.session_id,
+            agent_id = request.agent_id,
+            stream = request.stream,
+        )
 
-        attachments = [
-            Document(
-                content=f"https://raw.githubusercontent.com/kubestellar/kubeflex/refs/heads/main/{url}",
-                mime_type="text/plain",
-            )
-            for i, url in enumerate(urls)
-        ]
-
-        available_shields = [shield.identifier for shield in client.shields.list()]
-        print(available_shields)
-        if not available_shields:
-            print("No available shields. Disabling safety.", "yellow")
-        else:
-            print(f"Available shields found: {available_shields}")
-        available_models = [
-            model.identifier for model in client.models.list() if model.model_type == "llm"
-        ]
-        if not available_models:
-            print("No available models. Exiting.", "red")
-            return
-
-        selected_model = available_models[0]
-        print(f"Using model: {selected_model}")
-
-
-        # TODO - temp hack to pass session_id along
-        def read_dict_from_file(file_path):
-            """Reads a flat dictionary from a JSON file."""
-            try:
-                with open(file_path, 'r') as file:
-                    dictionary = json.load(file)
-                print(f"Dictionary successfully read from {file_path}.")
-                return dictionary
-            except Exception as e:
-                print(f"An error occurred while reading from the file: {e}")
-                return None
-
-        cfg = read_dict_from_file("/tmp/turn_info.json")
-         
-        user_prompts = [
-            (
-                "What is KubeFlex? Give a short summary.",
-                attachments,
-            ),
-        ]
-
-        for prompt in user_prompts:
-            response =  client.agents.turn.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt[0],
-                    }
-                ],
-                documents=prompt[1],
-                session_id=cfg['session_id'],
-                agent_id=cfg['agent_id'],
-                stream="true",
-            )
-
-    
-            # need to iterate and give time for events to be emitted by the MetaReferenceAgentsWorkerImpl 
-            for log in EventLogger().log(response):
-                await asyncio.sleep(0.01)
-               
+        # need to iterate and give time for events to be emitted by the MetaReferenceAgentsWorkerImpl
+        for log in EventLogger().log(response):
+            await asyncio.sleep(0.01)

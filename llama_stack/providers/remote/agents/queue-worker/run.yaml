@@ -42,7 +42,15 @@ providers:
         db: postgres
         user: postgres
         password: mysecretpassword
-        table_name: llamastack_kvstore # Optional, defaults to llamastack_kvstore
+        table_name: llamastack_kvstore
+      redis_store:
+        host: localhost
+        port: 6379
+        user: redis
+        password: mysecretpassword
+      worker_config:
+        queue_name: turns
+        health_check_port: 8081
   telemetry:
   - provider_id: meta-reference
     provider_type: inline::meta-reference
