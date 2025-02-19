@@ -177,6 +177,7 @@ python llama_stack/providers/remote/agents/queue-worker/main.py
 On a new terminal on the `llama-stack`, run the following:
 
 ```shell
+conda activate stack
 python llama_stack/providers/remote/agents/queue-worker/test/test_agent.py
 ```
 You should get a streamed output similar to the following:
