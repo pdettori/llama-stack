@@ -16,17 +16,17 @@ from aiohttp import web
 from dotenv import load_dotenv, find_dotenv
 
 from bullmq import Worker
-from config import (
+from .config import (
     get_run_config_file_path,
     initialize_redis_store_from_config,
     initialize_kvstore_from_config,
     get_worker_config
 )
 from llama_stack import LlamaStackAsLibraryClient
-from logger import setup_logging
-from runner import JobHandler
-from telemetry import setup_telemetry
-from workers import run_workers, shutdown_workers, create_worker
+from .logger import setup_logging
+from .runner import JobHandler
+from .telemetry import setup_telemetry
+from .workers import run_workers, shutdown_workers, create_worker
 
 load_dotenv(find_dotenv())  # read local .env file
 logger = logging.getLogger(__name__)

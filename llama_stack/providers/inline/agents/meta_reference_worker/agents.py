@@ -112,10 +112,10 @@ class MetaReferenceAgentsWorkerImpl(MetaReferenceAgentsImpl):
                 yield event    
         except asyncio.CancelledError as e:
             log.info(e)
-            raise
+        except ValueError as e:
+            log.exception("error publishing event: %s - make sure you enable session persistence in your agent config", e)    
         except Exception as e:
-            log.exception("error publishing event: %s", e)
-            raise e
+            log.exception("unexpected error publishing event: %s", e)
 
     async def retrieve_turn_job_id(self, agent_id, session_id) -> str:
         """retrieves the turn_job_id associated with this turn from the persistent store"""

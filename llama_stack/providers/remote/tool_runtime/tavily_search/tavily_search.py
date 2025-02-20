@@ -74,4 +74,5 @@ class TavilySearchToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, NeedsReques
         return ToolInvocationResult(content=json.dumps(self._clean_tavily_response(response.json())))
 
     def _clean_tavily_response(self, search_response, top_k=3):
+        print(search_response)
         return {"query": search_response["query"], "top_k": search_response["results"]}

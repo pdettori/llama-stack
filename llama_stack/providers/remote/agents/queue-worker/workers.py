@@ -48,7 +48,7 @@ Runners = list[tuple[Worker, asyncio.Task]]
 
 async def run_workers(names: List[str], queue):
     # TODO add autodiscovery
-    import runner
+    from .runner import JobHandler
 
     tuples: Runners = []
     for name in names:

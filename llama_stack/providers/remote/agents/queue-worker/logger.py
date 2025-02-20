@@ -5,7 +5,7 @@
 # the root directory of this source tree.
 
 import logging
-from telemetry import logging_handler
+from .telemetry import logging_handler
 
 LOG_LEVEL = "INFO"  # Use uppercase for recognized level
 

@@ -24,9 +24,13 @@ providers:
     provider_type: inline::faiss
     config:
       kvstore:
-        type: sqlite
-        namespace: null
-        db_path: ${env.SQLITE_STORE_DIR:~/.llama/distributions/ollama}/faiss_store.db
+        type: postgres
+        host: localhost
+        port: 5432
+        db: postgres
+        user: postgres
+        password: mysecretpassword
+        table_name: faiss_kvstore
   safety:
   - provider_id: llama-guard
     provider_type: inline::llama-guard
@@ -57,7 +61,7 @@ providers:
     config:
       service_name: ${env.OTEL_SERVICE_NAME:llama-stack}
       sinks: ${env.TELEMETRY_SINKS:console,sqlite}
-      sqlite_db_path: ${env.SQLITE_DB_PATH:~/.llama/distributions/ollama/trace_store_w.db}
+      sqlite_db_path: ${env.SQLITE_DB_PATH:~/.llama/distributions/ollama/trace_store_.db}
   eval:
   - provider_id: meta-reference
     provider_type: inline::meta-reference

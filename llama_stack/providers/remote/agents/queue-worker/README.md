@@ -163,13 +163,13 @@ llama stack run llama_stack/providers/inline/agents/meta_reference_dispatcher/ru
 #### Starting llama-stack worker
 
 Open another terminal on the `llama-stack` project and branch previosuly cloned, then make sure the conda
-env `stack` is activated, cd to `queue-worker` remote agent directory and run the llama-stack agent worker
+env `stack` is activated, `cd` to `queue-worker` remote agent directory and run the llama-stack agent worker
 as follows:
 
 ```shell
 conda activate stack
 export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
-python llama_stack/providers/remote/agents/queue-worker/main.py
+python -m llama_stack.providers.remote.agents.queue-worker.main
 ```
 
 ### Running an agent turn using the SDK
@@ -178,7 +178,7 @@ On a new terminal on the `llama-stack`, run the following:
 
 ```shell
 conda activate stack
-python llama_stack/providers/remote/agents/queue-worker/test/test_agent.py
+python -m llama_stack.providers.remote.agents.queue-worker.test.test_agent
 ```
 You should get a streamed output similar to the following:
 
@@ -191,6 +191,139 @@ tool_execution> fetched 5294 bytes from memory
 inference> KubeFlex is a flexible and scalable platform for running Kubernetes control plane APIs. Its goals include providing lightweight Kube API Server instances, controllers as a service, and flexibility in the choice of API Server build. It offers a single binary CLI for improved user experience, enabling users to initialize, install operators, manage lifecycle of control planes, and contexts.
 <redacted>
 ```
+
+### Running other Llama Stack Agents demo from community
+
+Clone the llama-stack-apps demo:
+
+```shell
+git clone https://github.com/meta-llama/llama-stack-apps.git
+cd llama-stack-apps
+```
+
+You may use the same conda env as specified in the README or create a new one. For these instructions
+we will use the same one:
+
+```shell
+conda activate stack
+pip install -r requirements.txt
+```
+
+**Important** - to run the first example, you need a `$TAVILY_SEARCH_API_KEY`. You can get
+a free one signig up at [tavily.com](https://tavily.com). The key is only required in the worker
+as the agent and the tool call run there. Therefore, you need to stop the worker, set the key 
+in the environment and restart:
+
+On the terminal where you previosuly run the worker, stop the current instance with CTRL+C
+and then:
+
+```shell
+conda activate stack
+export TAVILY_SEARCH_API_KEY=<your key>
+export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
+python llama_stack/providers/remote/agents/queue-worker/main.py
+```
+
+Open a new terminal to run the SDK client code, and activate it.
+
+```shell
+conda activate stack
+```
+
+Before running the code, you need to ensure that the agent is set to persist
+the session in the DB. All the examples do not persist the session.
+
+Edit the file `examples/agents/hello.py`, find the line `enable_session_persistence=False`
+and change it to `enable_session_persistence=True`. 
+
+Or run the following command:
+
+```shell
+sed -i.bak 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/hello.py
+```
+
+**Important** The client SDK code doesn't actually require TAVILY_SEARCH_API_KEY 
+to be set in the client environment. However, the code is structured to rely on 
+the presence of this environment variable to decide whether to use the Tavily 
+search tool. Therefore, before running the code, you should set the key to any 
+value, as the specific value is irrelevant.
+
+```shell
+export TAVILY_SEARCH_API_KEY=any-value
+```
+
+Finally, you can run the hello agent example:
+
+```shell
+python -m examples.agents.hello localhost 8321
+```
+
+#### Running inflation.py
+
+The code requires couple of adjustments to work. Note that the adjustments on `tool_choice` 
+is required even if running the llama-stack as monolith server as usual.
+
+```shell
+sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' -e 's/tool_choice="required"/tool_choice="auto"/' examples/agents/inflation.py
+python -m examples.agents.inflation localhost 8321
+```
+
+Note: when running the worker agent on MacOS, you may see a number of warnings in the response
+of the form:
+
+```shell
+[stderr]
+Traceback (most recent call last):
+  line 5, in <module>
+    from bwrap.core import main
+ModuleNotFoundError: No module named 'bwrap.core'
+[/stderr]
+```
+
+This is expected and it is because "bwra, which is a command-line tool used for sandboxing applications 
+in Linux, requires a Linux system with namespaces support, and does not work on MacOS. We should be 
+able to make this work e2e (with code execution in the sandboxed env) when running in Kube on a linux box.
+
+#### Running podcast_transcript.py
+
+The code requires couple of adjustments to work. Note that the adjustments on `tool_choice` and 
+`toolgroups` to use are required even if running the llama-stack as monolith server as usual.
+
+```shell
+sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' -e 's/tool_choice="required"/tool_choice="auto"/' -e 's/\["builtin::code_interpreter"\]/& + \["builtin::rag"\]/' examples/agents/podcast_transcript.py
+python -m examples.agents.podcast_transcript localhost 8321
+```
+
+#### Running rag_as_attachments.py
+
+The code requires setting `enable_session_persistence=True` to work. 
+
+```shell
+sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/rag_as_attachments.py
+python -m examples.agents.rag_as_attachments localhost 8321
+```
+
+#### Running rag_with_vector_db.py
+
+The code requires setting `enable_session_persistence=True` to work. 
+
+```shell
+sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/rag_with_vector_db.py
+python -m examples.agents.rag_with_vector_db localhost 8321
+```
+
+Note: this particular example uses the `faiss` vector DB. By default the faiss provider uses 
+`sqllite` as kvstore. Both server and worker have been configured with faiss backed by
+postgres. This allow the worker to access the `vector_db_id` created by the client
+via `client.tool_runtime.rag_tool.insert`.
+
+#### Running react_agent.py
+
+At this time **this does not work** as `ReActAgent` is a client SDK wrapper for Agent which 
+does not allow to set `enable_session_persistence` and is configured by default with no
+persistence. Opened an [issue](https://github.com/meta-llama/llama-stack-client-python/issues/148) 
+to raise this problem with the community.
+
 
 #### TODOs
 
