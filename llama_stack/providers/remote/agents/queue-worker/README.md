@@ -221,7 +221,7 @@ and then:
 conda activate stack
 export TAVILY_SEARCH_API_KEY=<your key>
 export INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
-python llama_stack/providers/remote/agents/queue-worker/main.py
+python -m llama_stack.providers.remote.agents.queue-worker.main
 ```
 
 Open a new terminal to run the SDK client code, and activate it.
