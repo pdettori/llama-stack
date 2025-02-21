@@ -18,7 +18,9 @@ from llama_stack.apis.agents import (
     AgentTurnResponseEventType,
     AgentTurnResponseEvent,
     AgentTurnResponseTurnCompletePayload,
-    Turn
+    Turn,
+    AgentConfig,
+    AgentCreateResponse,
 )
 from typing import AsyncGenerator, List, Optional, Union
 from llama_stack.apis.inference import (
@@ -75,6 +77,15 @@ class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
 
     async def initialize(self):
         await super().initialize()
+
+    async def create_agent(
+        self,
+        agent_config: AgentConfig,
+    ) -> AgentCreateResponse:
+        # the Web-Queue-Worker pattern requires the enable_session_persistence
+        # always True
+        agent_config.enable_session_persistence = True
+        return await super().create_agent(agent_config)
 
     async def create_agent_turn(
         self,
@@ -182,16 +193,20 @@ class RedisSubscriber:
                         log.error("Failed to decode message data")
 
                     chunk = AgentTurnResponseStreamChunk.model_validate_json(json_event)
-                   
+
                     # closing the SSE connection after the last event requires return without data
                     # this will cause the server to send a content length of 0 and no data after that
                     # normally there will be a content lenght line followed by a content line
-                    # e.g., 
+                    # e.g.,
                     # ac <-content length in hex
                     # data: {"event":{"payload":{"event_type":"step_progress","step_type":"inference",
                     # "step_id":"b5d7edca-44a3-4dc7-9426-1b82e05c2b6c",
                     # "delta":{"type":"text","text":" more"}}}} <- data
-                    if chunk is not None and chunk.event.payload.event_type == EventType.turn_complete.value:
+                    if (
+                        chunk is not None
+                        and chunk.event.payload.event_type
+                        == EventType.turn_complete.value
+                    ):
                         yield chunk
                         return
                     else:

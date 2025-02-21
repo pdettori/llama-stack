@@ -63,7 +63,7 @@ class JobHandler:
 
         # need to iterate and give time for events to be emitted by the MetaReferenceAgentsWorkerImpl
         for log in EventLogger().log(response):
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.005)
 
         # this is required to allow time for deallocating mem.  
         time.sleep(1)    

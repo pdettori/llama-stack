@@ -230,18 +230,6 @@ Open a new terminal to run the SDK client code, and activate it.
 conda activate stack
 ```
 
-Before running the code, you need to ensure that the agent is set to persist
-the session in the DB. All the examples do not persist the session.
-
-Edit the file `examples/agents/hello.py`, find the line `enable_session_persistence=False`
-and change it to `enable_session_persistence=True`. 
-
-Or run the following command:
-
-```shell
-sed -i.bak 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/hello.py
-```
-
 **Important** The client SDK code doesn't actually require TAVILY_SEARCH_API_KEY 
 to be set in the client environment. However, the code is structured to rely on 
 the presence of this environment variable to decide whether to use the Tavily 
@@ -260,11 +248,11 @@ python -m examples.agents.hello localhost 8321
 
 #### Running inflation.py
 
-The code requires couple of adjustments to work. Note that the adjustments on `tool_choice` 
+The code requires an adjustment to work. Note that the adjustments on `tool_choice` 
 is required even if running the llama-stack as monolith server as usual.
 
 ```shell
-sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' -e 's/tool_choice="required"/tool_choice="auto"/' examples/agents/inflation.py
+sed -i.bak -e 's/tool_choice="required"/tool_choice="auto"/' examples/agents/inflation.py
 python -m examples.agents.inflation localhost 8321
 ```
 
@@ -280,8 +268,8 @@ ModuleNotFoundError: No module named 'bwrap.core'
 [/stderr]
 ```
 
-This is expected and it is because "bwra, which is a command-line tool used for sandboxing applications 
-in Linux, requires a Linux system with namespaces support, and does not work on MacOS. We should be 
+This is expected and it is because `bwra, which is a command-line tool used for sandboxing applications 
+in Linux, requires a Linux system with namespaces support, and does not work on MacOS`. We should be 
 able to make this work e2e (with code execution in the sandboxed env) when running in Kube on a linux box.
 
 #### Running podcast_transcript.py
@@ -290,25 +278,19 @@ The code requires couple of adjustments to work. Note that the adjustments on `t
 `toolgroups` to use are required even if running the llama-stack as monolith server as usual.
 
 ```shell
-sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' -e 's/tool_choice="required"/tool_choice="auto"/' -e 's/\["builtin::code_interpreter"\]/& + \["builtin::rag"\]/' examples/agents/podcast_transcript.py
+sed -e 's/tool_choice="required"/tool_choice="auto"/' -e 's/\["builtin::code_interpreter"\]/& + \["builtin::rag"\]/' examples/agents/podcast_transcript.py
 python -m examples.agents.podcast_transcript localhost 8321
 ```
 
 #### Running rag_as_attachments.py
 
-The code requires setting `enable_session_persistence=True` to work. 
-
 ```shell
-sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/rag_as_attachments.py
 python -m examples.agents.rag_as_attachments localhost 8321
 ```
 
 #### Running rag_with_vector_db.py
 
-The code requires setting `enable_session_persistence=True` to work. 
-
 ```shell
-sed -i.bak -e 's/enable_session_persistence=False/enable_session_persistence=True/' examples/agents/rag_with_vector_db.py
 python -m examples.agents.rag_with_vector_db localhost 8321
 ```
 
@@ -319,11 +301,10 @@ via `client.tool_runtime.rag_tool.insert`.
 
 #### Running react_agent.py
 
-At this time **this does not work** as `ReActAgent` is a client SDK wrapper for Agent which 
-does not allow to set `enable_session_persistence` and is configured by default with no
-persistence. Opened an [issue](https://github.com/meta-llama/llama-stack-client-python/issues/148) 
-to raise this problem with the community.
 
+```shell
+python -m examples.agents.react_agent localhost 8321
+```
 
 #### TODOs
 
