@@ -10,6 +10,7 @@ from llama_stack.providers.inline.agents.meta_reference import MetaReferenceAgen
 from llama_stack.providers.inline.agents.meta_reference import (
     MetaReferenceAgentsImplConfig,
 )
+from llama_stack.distribution.request_headers import NeedsRequestProviderData
 from llama_stack.apis.agents import (
     AgentToolGroup,
     AgentTurnCreateRequest,
@@ -55,7 +56,7 @@ def gen_turn_job_id_list_key(agent_id, session_id) -> str:
 
 
 # Dispatches jobs for agent turns using a Queue-Worker Pattern
-class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
+class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
     def __init__(
         self,
         config: MetaReferenceAgentsImplConfig,
@@ -75,6 +76,7 @@ class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
         )
         self.jobs_queue = Queue(TURNS_JOB_QUEUE)
 
+       
     async def initialize(self):
         await super().initialize()
 
@@ -82,6 +84,8 @@ class MetaReferenceAgentsDispatcherImpl(MetaReferenceAgentsImpl):
         self,
         agent_config: AgentConfig,
     ) -> AgentCreateResponse:
+        # example of getting provider_data
+        # provider_data = self.get_request_provider_data()
         # the Web-Queue-Worker pattern requires the enable_session_persistence
         # always True
         agent_config.enable_session_persistence = True

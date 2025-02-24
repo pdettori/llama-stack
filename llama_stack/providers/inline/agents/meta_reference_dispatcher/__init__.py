@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 from typing import Dict
+from pydantic import BaseModel
 
 from llama_stack.distribution.datatypes import Api, ProviderSpec
 
@@ -27,3 +28,8 @@ async def get_provider_impl(
     )
     await impl.initialize()
     return impl
+
+
+class MetaReferenceAgentsDispatcherDataValidator(BaseModel):
+    framework: str
+    implementation_class: str

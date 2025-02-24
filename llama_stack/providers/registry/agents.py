@@ -51,6 +51,7 @@ def available_providers() -> List[ProviderSpec]:
             + kvstore_dependencies(),
             module="llama_stack.providers.inline.agents.meta_reference_dispatcher",
             config_class="llama_stack.providers.inline.agents.meta_reference_dispatcher.MetaReferenceAgentsDispatcherImplConfig",
+            provider_data_validator="llama_stack.providers.inline.agents.meta_reference_dispatcher.MetaReferenceAgentsDispatcherDataValidator",
             api_dependencies=[
                 Api.inference,
                 Api.safety,

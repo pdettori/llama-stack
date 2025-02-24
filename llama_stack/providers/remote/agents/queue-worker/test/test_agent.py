@@ -14,7 +14,7 @@ from termcolor import colored
 
 from dotenv import load_dotenv, find_dotenv
 
-_ = load_dotenv(find_dotenv()) # read local .env file
+_ = load_dotenv(find_dotenv())  # read local .env file
 
 HOST = "localhost"
 PORT = 8321
@@ -35,8 +35,17 @@ def run_main(disable_safety: bool = False):
 
     client = LlamaStackClient(
         base_url=f"http://{HOST}:{PORT}",
+        # example headers and provider data
+        default_headers={
+            "Authorization": "Bearer your_token_here",
+            "Content-Type": "application/json",
+        },
+        provider_data={
+            "framework": "LangGraph",
+            "implementation_class": "SomeImplementationClass",
+        },
     )
-   
+
     available_shields = [shield.identifier for shield in client.shields.list()]
     if not available_shields:
         print(colored("No available shields. Disabling safety.", "yellow"))
@@ -99,4 +108,3 @@ def main():
 
 if __name__ == "__main__":
     fire.Fire(main)
-
