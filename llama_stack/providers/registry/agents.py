@@ -39,6 +39,30 @@ def available_providers() -> List[ProviderSpec]:
                 Api.tool_groups,
             ],
         ),
+        InlineProviderSpec(
+            api=Api.agents,
+            provider_type="inline::langgraph",
+            pip_packages=[
+                "matplotlib",
+                "pillow",
+                "pandas",
+                "scikit-learn",
+                "langchain_core",
+                "langgraph",
+                "langchain_ollama",
+            ]
+            + kvstore_dependencies(),
+            module="llama_stack.providers.inline.agents.langgraph",
+            config_class="llama_stack.providers.inline.agents.langgraph.LangGraphImplConfig",
+            api_dependencies=[
+                Api.inference,
+                Api.safety,
+                Api.vector_io,
+                Api.vector_dbs,
+                Api.tool_runtime,
+                Api.tool_groups,
+            ],
+        ),
         remote_provider_spec(
             api=Api.agents,
             adapter=AdapterSpec(

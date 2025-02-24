@@ -5,17 +5,20 @@
 # the root directory of this source tree.
 
 from typing import Dict
+from pydantic import BaseModel
 
 from llama_stack.distribution.datatypes import Api, ProviderSpec
 
-from .config import MetaReferenceAgentsImplConfig
-from .agents import MetaReferenceAgentsImpl
+from .config import LangGraphAgentImplConfig
 
 
-async def get_provider_impl(config: MetaReferenceAgentsImplConfig, deps: Dict[Api, ProviderSpec]):
-    from .agents import MetaReferenceAgentsImpl
 
-    impl = MetaReferenceAgentsImpl(
+async def get_provider_impl(
+    config: LangGraphAgentImplConfig, deps: Dict[Api, ProviderSpec]
+):
+    from .agents import LangGraphAgentImpl
+
+    impl = LangGraphAgentImpl(
         config,
         deps[Api.inference],
         deps[Api.vector_io],
@@ -25,3 +28,8 @@ async def get_provider_impl(config: MetaReferenceAgentsImplConfig, deps: Dict[Ap
     )
     await impl.initialize()
     return impl
+
+
+class LangGraphAgentImplDataValidator(BaseModel):
+    framework: str
+    implementation_class: str
