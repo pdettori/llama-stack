@@ -70,19 +70,26 @@ class MathAgent:
     def getGraph() -> StateGraph:
         return graph
     
+class EventProcesor:
+    def __init__(self):
+        self.start_run_id = None
 
-def process_event(event:dict):
-    if event['event'] == 'on_chat_model_stream':
-        print(event['data']['chunk'])
-    elif event['event'] == 'on_chain_end':    
-       # print(event['data']['output'])
-        print(event['run_id'])   
-    # elif event['event'] == 'on_chain_stream':    
-    #     print(event['data']['chunk'])    
-    # elif event['event'] == 'on_chat_model_end':    
-    #     print(event['data']['output'])
-    elif event['event'] == 'on_chain_start':
-        print(event['run_id'])            
+    def process_event(self, event:dict):
+        if event['event'] == 'on_chat_model_stream':
+            print(event['data']['chunk'])
+        elif event['event'] == 'on_chain_end':    
+            # print(event['data']['output'])
+            print(event['run_id'])
+            if event['run_id'] == self.start_run_id:
+                print("end streaming")
+        # elif event['event'] == 'on_chain_stream':    
+        #     print(event['data']['chunk'])    
+        # elif event['event'] == 'on_chat_model_end':    
+        #     print(event['data']['output'])
+        elif event['event'] == 'on_chain_start':
+            if self.start_run_id == None:
+                self.start_run_id = event['run_id']
+                print(event['run_id'])            
 
 
 thread = {"configurable": {"thread_id": "1234"}} 
@@ -92,8 +99,9 @@ messages = [HumanMessage(content="Multiply 2 by 2.")]
 
 
 async def main():
+ processor = EventProcesor()
  async for event in graph.astream_events({"messages": messages}, config, version="v2"):
-        process_event(event)
+        processor.process_event(event)
 
     # async for msg, metadata in graph.astream(
     #     {"messages": messages}, config,
