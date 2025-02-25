@@ -53,7 +53,7 @@ def available_providers() -> List[ProviderSpec]:
             ]
             + kvstore_dependencies(),
             module="llama_stack.providers.inline.agents.langgraph",
-            config_class="llama_stack.providers.inline.agents.langgraph.LangGraphImplConfig",
+            config_class="llama_stack.providers.inline.agents.langgraph.LangGraphAgentImplConfig",
             api_dependencies=[
                 Api.inference,
                 Api.safety,

@@ -71,9 +71,47 @@ class MathAgent:
         return graph
     
 
+def process_event(event:dict):
+    if event['event'] == 'on_chat_model_stream':
+        print(event['data']['chunk'])
+    elif event['event'] == 'on_chain_end':    
+       # print(event['data']['output'])
+        print(event['run_id'])   
+    # elif event['event'] == 'on_chain_stream':    
+    #     print(event['data']['chunk'])    
+    # elif event['event'] == 'on_chat_model_end':    
+    #     print(event['data']['output'])
+    elif event['event'] == 'on_chain_start':
+        print(event['run_id'])            
 
-messages = [HumanMessage(content="add 3 and 4")]
+
 thread = {"configurable": {"thread_id": "1234"}} 
 graph = MathAgent.getGraph()
-response = graph.invoke({"messages": messages})
-print(response)
+config = {"configurable": {"thread_id": "xxx"}}       
+messages = [HumanMessage(content="Multiply 2 by 2.")]
+
+
+async def main():
+ async for event in graph.astream_events({"messages": messages}, config, version="v2"):
+        process_event(event)
+
+    # async for msg, metadata in graph.astream(
+    #     {"messages": messages}, config,
+    #     stream_mode="messages",
+    # ):
+    #     print(msg.response_metadata)
+        # if msg.content:
+        #     print(msg.content, end="|", flush=True)    
+        #     if "response_metadata=" in msg:
+        #         print("1")
+        #         if "done" in msg["response_metadata="]:
+        #             print("2")
+        #             if msg["response_metadata="]['done'] == "True":
+        #                 print("done")
+
+import asyncio
+if __name__ == "__main__":
+    # Run the async function using asyncio
+    asyncio.run(main())
+
+

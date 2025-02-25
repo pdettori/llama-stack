@@ -42,6 +42,8 @@ from pydantic import BaseModel, ValidationError
 from datetime import datetime
 from typing import List
 import json
+from .math_agent import graph
+from langchain_core.messages import SystemMessage, HumanMessage
 
 EventType = AgentTurnResponseEventType
 
@@ -83,6 +85,7 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
         agent_config.enable_session_persistence = True
         return await super().create_agent(agent_config)
 
+   
     async def create_agent_turn(
         self,
         agent_id: str,
@@ -97,6 +100,7 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
         documents: Optional[List[Document]] = None,
         stream: Optional[bool] = False,
         tool_config: Optional[ToolConfig] = None,
+        allow_turn_resume: Optional[bool] = False,
     ) -> AsyncGenerator:
         log.info(
             f"LangGraphAgentImpl.create_agent_turn: {agent_id} and session {session_id}"
@@ -109,8 +113,19 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
             toolgroups=toolgroups,
             documents=documents,
             tool_config=tool_config,
+            allow_turn_resume=allow_turn_resume,
         )
+        if not stream:
+            raise NotImplementedError("Non-streaming agent turns not yet implemented")
 
-        
+        config = {"configurable": {"thread_id": session_id}}       
+        messages = [HumanMessage(content="Multiply 2 by 2.")]
+        async for event in graph.astream_events({"messages": messages}, config, version="v2"):
+            print(event)
+            #print(f"Node: {event['metadata'].get('langgraph_node','')}, Type: {event['event']}, Name: {event['name']}")
+            # async for chunk in react_graph.astream(inputs, config, stream_mode="values"):
+            #     print(chunk)
+            #     #chunk["messages"][-1].pretty_print()
+
 
     
