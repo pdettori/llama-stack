@@ -45,11 +45,11 @@ ENVNAME=""
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 source "$SCRIPT_DIR/common.sh"
 
-ensure_conda_env_python310() {
+ensure_conda_env_python311() {
   local env_name="$1"
   local pip_dependencies="$2"
   local special_pip_deps="$3"
-  local python_version="3.10"
+  local python_version="3.11"
 
   # Check if conda command is available
   if ! command -v conda &>/dev/null; then
@@ -145,4 +145,4 @@ ensure_conda_env_python310() {
   echo "Build spec configuration saved at $CONDA_PREFIX/llamastack-build.yaml"
 }
 
-ensure_conda_env_python310 "$env_name" "$pip_dependencies" "$special_pip_deps"
+ensure_conda_env_python311 "$env_name" "$pip_dependencies" "$special_pip_deps"

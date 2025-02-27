@@ -4,8 +4,6 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-
-import asyncio
 from llama_stack.providers.inline.agents.meta_reference import MetaReferenceAgentsImpl
 from llama_stack.providers.inline.agents.meta_reference import (
     MetaReferenceAgentsImplConfig,
@@ -19,9 +17,11 @@ from llama_stack.apis.agents import (
     AgentTurnResponseEventType,
     AgentTurnResponseEvent,
     AgentTurnResponseTurnCompletePayload,
+    AgentTurnResponseStepProgressPayload,
     Turn,
     AgentConfig,
     AgentCreateResponse,
+    StepType,
 )
 from typing import AsyncGenerator, List, Optional, Union
 from llama_stack.apis.inference import (
@@ -29,20 +29,21 @@ from llama_stack.apis.inference import (
     ToolResponseMessage,
     UserMessage,
 )
-import asyncio
-import uuid
+from llama_stack.apis.common.content_types import (
+    TextContentItem,
+    ToolCallDelta,
+    ToolCallParseStatus,
+    TextDelta,
+    URL,
+)
 import logging
-import redis.asyncio as redis
+import json
 from llama_stack.apis.safety import Safety
 from llama_stack.apis.tools import ToolGroups, ToolRuntime
 from llama_stack.apis.vector_io import VectorIO
 from llama_stack.apis.inference import Inference
-import hashlib
-from pydantic import BaseModel, ValidationError
-from datetime import datetime
-from typing import List
-import json
 from .math_agent import graph
+from .converters import convert_messages, EventProcessor
 from langchain_core.messages import SystemMessage, HumanMessage
 
 EventType = AgentTurnResponseEventType
@@ -50,7 +51,6 @@ EventType = AgentTurnResponseEventType
 log = logging.getLogger(__name__)
 
 
-# Dispatches jobs for agent turns using a Queue-Worker Pattern
 class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
     def __init__(
         self,
@@ -69,8 +69,7 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
             tool_runtime_api,
             tool_groups_api,
         )
-       
-       
+
     async def initialize(self):
         await super().initialize()
 
@@ -85,7 +84,6 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
         agent_config.enable_session_persistence = True
         return await super().create_agent(agent_config)
 
-   
     async def create_agent_turn(
         self,
         agent_id: str,
@@ -118,14 +116,40 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
         if not stream:
             raise NotImplementedError("Non-streaming agent turns not yet implemented")
 
-        config = {"configurable": {"thread_id": session_id}}       
-        messages = [HumanMessage(content="Multiply 2 by 2.")]
-        async for event in graph.astream_events({"messages": messages}, config, version="v2"):
-            print(event)
-            #print(f"Node: {event['metadata'].get('langgraph_node','')}, Type: {event['event']}, Name: {event['name']}")
-            # async for chunk in react_graph.astream(inputs, config, stream_mode="values"):
-            #     print(chunk)
-            #     #chunk["messages"][-1].pretty_print()
+        return self.create_lg_run(request)
+
+    async def create_lg_run(self, request: AgentTurnCreateRequest) -> AsyncGenerator:
+        agent_config = await self.get_agent_config(request.agent_id)
+        print(agent_config)
+        config = {"configurable": {"thread_id": request.session_id}}
+        sys_msg = SystemMessage(content=agent_config.instructions)
+        messages = [sys_msg] + convert_messages(request.messages)
+        print(messages)
+        processor = EventProcessor()
+        async for event in graph.astream_events(
+            {"messages": messages}, config, version="v2"
+        ):
+            chunk = processor.process_event(event)
+            if chunk == False:
+                return
+            if chunk is not None:
+                yield chunk
 
 
-    
+    async def get_agent_config(self, agent_id: str) -> AgentConfig:
+        agent_config = await self.persistence_store.get(
+            key=f"agent:{agent_id}",
+        )
+        if not agent_config:
+            raise ValueError(f"Could not find agent config for {agent_id}")
+
+        try:
+            agent_config = json.loads(agent_config)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Could not JSON decode agent config for {agent_id}") from e
+
+        try:
+            agent_config = AgentConfig(**agent_config)
+        except Exception as e:
+            raise ValueError(f"Could not validate(?) agent config for {agent_id}") from e
+        return agent_config

@@ -1,10 +1,6 @@
-from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_ollama import ChatOllama
-
 from langgraph.graph import START, StateGraph, MessagesState
 from langgraph.prebuilt import tools_condition, ToolNode
-
-from dotenv import load_dotenv
 
 
 def add(a: int, b: int) -> int:
@@ -34,7 +30,6 @@ def divide(a: int, b: int) -> float:
     """
     return a / b
 
-load_dotenv()
 
 tools = [add, multiply, divide]
 
@@ -42,12 +37,9 @@ tools = [add, multiply, divide]
 llm = ChatOllama(model="llama3.2:3b-instruct-fp16")
 llm_with_tools = llm.bind_tools(tools)
 
-# System message
-sys_msg = SystemMessage(content="You are a helpful assistant tasked with writing performing arithmetic on a set of inputs.")
-
 # Node
 def assistant(state: MessagesState):
-   return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+   return {"messages": [llm_with_tools.invoke(state["messages"])]}
 
 # Build graph
 builder = StateGraph(MessagesState)
@@ -56,8 +48,6 @@ builder.add_node("tools", ToolNode(tools))
 builder.add_edge(START, "assistant")
 builder.add_conditional_edges(
     "assistant",
-    # If the latest message (result) from assistant is a tool call -> tools_condition routes to tools
-    # If the latest message (result) from assistant is a not a tool call -> tools_condition routes to END
     tools_condition,
 )
 builder.add_edge("tools", "assistant")
@@ -70,56 +60,6 @@ class MathAgent:
     def getGraph() -> StateGraph:
         return graph
     
-class EventProcesor:
-    def __init__(self):
-        self.start_run_id = None
 
-    def process_event(self, event:dict):
-        if event['event'] == 'on_chat_model_stream':
-            print(event['data']['chunk'])
-        elif event['event'] == 'on_chain_end':    
-            # print(event['data']['output'])
-            print(event['run_id'])
-            if event['run_id'] == self.start_run_id:
-                print("end streaming")
-        # elif event['event'] == 'on_chain_stream':    
-        #     print(event['data']['chunk'])    
-        # elif event['event'] == 'on_chat_model_end':    
-        #     print(event['data']['output'])
-        elif event['event'] == 'on_chain_start':
-            if self.start_run_id == None:
-                self.start_run_id = event['run_id']
-                print(event['run_id'])            
-
-
-thread = {"configurable": {"thread_id": "1234"}} 
-graph = MathAgent.getGraph()
-config = {"configurable": {"thread_id": "xxx"}}       
-messages = [HumanMessage(content="Multiply 2 by 2.")]
-
-
-async def main():
- processor = EventProcesor()
- async for event in graph.astream_events({"messages": messages}, config, version="v2"):
-        processor.process_event(event)
-
-    # async for msg, metadata in graph.astream(
-    #     {"messages": messages}, config,
-    #     stream_mode="messages",
-    # ):
-    #     print(msg.response_metadata)
-        # if msg.content:
-        #     print(msg.content, end="|", flush=True)    
-        #     if "response_metadata=" in msg:
-        #         print("1")
-        #         if "done" in msg["response_metadata="]:
-        #             print("2")
-        #             if msg["response_metadata="]['done'] == "True":
-        #                 print("done")
-
-import asyncio
-if __name__ == "__main__":
-    # Run the async function using asyncio
-    asyncio.run(main())
 
 
