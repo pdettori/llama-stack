@@ -1,33 +1,37 @@
 from langchain_ollama import ChatOllama
 from langgraph.graph import START, StateGraph, MessagesState
 from langgraph.prebuilt import tools_condition, ToolNode
+from langchain_core.runnables.config import RunnableConfig
 
 
-def add(a: int, b: int) -> int:
+def add(a: int, b: int, config: RunnableConfig) -> int:
     """Adds a and b.
 
     Args:
         a: first int
         b: second int
     """
+
     return a + b
 
-def multiply(a: int, b: int) -> int:
+def multiply(a: int, b: int, config: RunnableConfig) -> int:
     """Multiplies a and b.
 
     Args:
         a: first int
         b: second int
     """
+
     return a * b
 
-def divide(a: int, b: int) -> float:
+def divide(a: int, b: int, config: RunnableConfig) -> float:
     """Divide a and b.
 
     Args:
         a: first int
         b: second int
     """
+    
     return a / b
 
 
@@ -38,8 +42,11 @@ llm = ChatOllama(model="llama3.2:3b-instruct-fp16")
 llm_with_tools = llm.bind_tools(tools)
 
 # Node
-def assistant(state: MessagesState):
-   return {"messages": [llm_with_tools.invoke(state["messages"])]}
+def assistant(state: MessagesState, config: RunnableConfig):
+   model_name = config["configurable"].get("model", "llama3.1")
+   llm = ChatOllama(model=model_name)
+   llm_with_tools = llm.bind_tools(tools)
+   return {"messages": [llm_with_tools.invoke(state["messages"],config=config)]}
 
 # Build graph
 builder = StateGraph(MessagesState)

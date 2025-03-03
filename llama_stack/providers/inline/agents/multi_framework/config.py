@@ -12,7 +12,7 @@ from llama_stack.providers.utils.kvstore import KVStoreConfig
 from llama_stack.providers.utils.kvstore.config import SqliteKVStoreConfig
 
 
-class LangGraphAgentImplConfig(BaseModel):
+class MultiFrameworkAgentImplConfig(BaseModel):
     persistence_store: KVStoreConfig
 
     @classmethod

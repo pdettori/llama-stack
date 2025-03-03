@@ -41,7 +41,7 @@ def available_providers() -> List[ProviderSpec]:
         ),
         InlineProviderSpec(
             api=Api.agents,
-            provider_type="inline::langgraph",
+            provider_type="inline::multi-framework",
             pip_packages=[
                 "matplotlib",
                 "pillow",
@@ -52,8 +52,8 @@ def available_providers() -> List[ProviderSpec]:
                 "langchain_ollama",
             ]
             + kvstore_dependencies(),
-            module="llama_stack.providers.inline.agents.langgraph",
-            config_class="llama_stack.providers.inline.agents.langgraph.LangGraphAgentImplConfig",
+            module="llama_stack.providers.inline.agents.multi_framework",
+            config_class="llama_stack.providers.inline.agents.multi_framework.MultiFrameworkAgentImplConfig",
             api_dependencies=[
                 Api.inference,
                 Api.safety,

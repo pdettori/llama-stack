@@ -43,7 +43,11 @@ from llama_stack.apis.tools import ToolGroups, ToolRuntime
 from llama_stack.apis.vector_io import VectorIO
 from llama_stack.apis.inference import Inference
 from .math_agent import graph
-from .converters import convert_messages, EventProcessor
+from .agent_factory import AgentFactory
+from .agent import MultiFrameworkAgent
+
+
+from .langgraph.converters import convert_messages, EventProcessor
 from langchain_core.messages import SystemMessage, HumanMessage
 
 EventType = AgentTurnResponseEventType
@@ -51,7 +55,7 @@ EventType = AgentTurnResponseEventType
 log = logging.getLogger(__name__)
 
 
-class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
+class MultiFrameworkAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
     def __init__(
         self,
         config: MetaReferenceAgentsImplConfig,
@@ -94,14 +98,14 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
                 ToolResponseMessage,
             ]
         ],
-        toolgroups: Optional[List[AgentToolGroup]] = None,
+        toolgroups: Optional[List[AgentToolGroup]] = None, # type: ignore
         documents: Optional[List[Document]] = None,
         stream: Optional[bool] = False,
         tool_config: Optional[ToolConfig] = None,
         allow_turn_resume: Optional[bool] = False,
     ) -> AsyncGenerator:
         log.info(
-            f"LangGraphAgentImpl.create_agent_turn: {agent_id} and session {session_id}"
+            f"MultiFrameworkAgentImpl.create_agent_turn: {agent_id} and session {session_id}"
         )
         request = AgentTurnCreateRequest(
             agent_id=agent_id,
@@ -116,24 +120,40 @@ class LangGraphAgentImpl(MetaReferenceAgentsImpl, NeedsRequestProviderData):
         if not stream:
             raise NotImplementedError("Non-streaming agent turns not yet implemented")
 
-        return self.create_lg_run(request)
-
-    async def create_lg_run(self, request: AgentTurnCreateRequest) -> AsyncGenerator:
         agent_config = await self.get_agent_config(request.agent_id)
-        print(agent_config)
-        config = {"configurable": {"thread_id": request.session_id}}
-        sys_msg = SystemMessage(content=agent_config.instructions)
-        messages = [sys_msg] + convert_messages(request.messages)
-        print(messages)
-        processor = EventProcessor()
-        async for event in graph.astream_events(
-            {"messages": messages}, config, version="v2"
-        ):
-            chunk = processor.process_event(event)
-            if chunk == False:
-                return
-            if chunk is not None:
-                yield chunk
+        agent_metadata = MultiFrameworkAgent.extract_agent_metadata(agent_config)
+        framework = agent_metadata["framework"]
+
+        try:
+            factory = AgentFactory.create_agent(framework)
+            agent = factory(agent_config=agent_config)
+            log.info("{framework} agent instantiated successfully.")
+        except Exception as e:
+            print(f"Error instantiating Agent: {e}")
+            raise e
+            #traceback.print_exc()
+        
+        try:
+            return agent.run_streaming(request.session_id, request.messages)
+        except Exception as e:
+            print(f"Failed to run agent: {e}")
+            raise e
+
+
+        # print(agent_config)
+        # config = {"configurable": {"thread_id": request.session_id}, "model": agent_config.model}
+        # sys_msg = SystemMessage(content=agent_config.instructions)
+        # messages = [sys_msg] + convert_messages(request.messages)
+        # processor = EventProcessor()
+        # async for event in graph.astream_events(
+        #     {"messages": messages}, config, version="v2"
+        # ):
+        #     chunk = processor.process_event(event)
+        #     if chunk is not None:
+        #         yield chunk
+        #         if isinstance(chunk.event.payload, AgentTurnResponseTurnCompletePayload):
+        #             return
+                
 
 
     async def get_agent_config(self, agent_id: str) -> AgentConfig:

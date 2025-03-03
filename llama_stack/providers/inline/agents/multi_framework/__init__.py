@@ -9,18 +9,18 @@ from pydantic import BaseModel
 
 from llama_stack.distribution.datatypes import Api, ProviderSpec
 
-from .config import LangGraphAgentImplConfig
+from .config import MultiFrameworkAgentImplConfig
 
-from .math_agent import graph
+from .math_agent import graph, MathAgent
 
 
 
 async def get_provider_impl(
-    config: LangGraphAgentImplConfig, deps: Dict[Api, ProviderSpec]
+    config: MultiFrameworkAgentImplConfig, deps: Dict[Api, ProviderSpec]
 ):
-    from .agents import LangGraphAgentImpl
+    from .agents import MultiFrameworkAgentImpl
 
-    impl = LangGraphAgentImpl(
+    impl = MultiFrameworkAgentImpl(
         config,
         deps[Api.inference],
         deps[Api.vector_io],
@@ -32,6 +32,6 @@ async def get_provider_impl(
     return impl
 
 
-class LangGraphAgentImplDataValidator(BaseModel):
+class MultiFrameworkAgentImplDataValidator(BaseModel):
     framework: str
     implementation_class: str
